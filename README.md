@@ -1,5 +1,5 @@
 # Code
-This project is part of DSLM Master class, Bio-Data analysis
+This project is part of DSLM Master class, Bio-Data Analysis
 
 Our topic will focus on the dataset provided in the article "Depresjon: a motor activity database of depression episodes in unipolar and bipolar patients" (https://dl.acm.org/doi/10.1145/3204949.3208125). The dataset is also available on Kaggle (https://www.kaggle.com/datasets/arashnic/the-depression-dataset) and includes 60 individuals with and without depression. It provides two types of information. The first is a 24-hour recording of the entire previous population's human activity per second through an actigraph smartwatch. The second information provided includes demographic and psychological characteristics, measurements from psychological tests, and the classification of depression into unipolar or bipolar (only for individuals suffering from it). The axes we would like to explore are as follows:
 
