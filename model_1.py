@@ -82,7 +82,9 @@ torch.manual_seed(42)
 criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 #optimizer = torch.optim.Adam(net.parameters(), lr=0.1, weight_decay=0)
 # another optimizer that we can use is SGD
-hyperparameters = {'lr': 0.01, 'weight_decay': 0.05, 'momentum': 0.1}
+################            ################         ################
+hyperparameters = {'lr': 0.01, 'weight_decay': 0.00001, 'momentum': 0.8}
+################            ################         ################
 optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
 
 
@@ -142,8 +144,6 @@ print(f'Accuracy: {round(accuracy, 3)*100}%')
 
 # csv with colums: epochs, lr, weight_decay, momentum, accuracy
 # in order to find the best hyperparameters
-df = pd.DataFrame(columns=['epochs', 'lr', 'weight_decay', 'momentum', 'accuracy'])
-df.to_csv('Data/NN_hyperparameters.csv', index=False, header=True)
 df = pd.read_csv('Data/NN_hyperparameters.csv')
 df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameters['weight_decay'], \
                                     hyperparameters['momentum'], accuracy]], columns=['epochs', 'lr', \
