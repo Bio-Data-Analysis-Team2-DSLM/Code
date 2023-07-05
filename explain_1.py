@@ -35,14 +35,14 @@ neurons = [first_layer_weights, second_layer_weights, third_layer_weights]
 
 # find where the weights had more impact
 # average the weights of each neuron
-count = 1
+count = 0
 for i in neurons:
     i = np.array(i)
     i = np.abs(i)
     i = np.mean(i)
     count += 1
     print()
-    print(f'The layer {count} has mean weight {i}')
+    print(f'The layer {count} has mean weight {i:.3f}')
 
 print()
 print('The neural network increases its mean weight as it goes deeper, which means\

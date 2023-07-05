@@ -113,7 +113,7 @@ criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 
 ################            ################         ################
 
-hyperparameters = {'lr': 0.01, 'weight_decay': 1e-5, 'momentum': 0.9}
+hyperparameters = {'lr': 1e-2, 'weight_decay': 1e-5, 'momentum': 0.5}
 lr_decay = 0.9   # 1 is for no decay
 
 ################            ################         ################
@@ -185,7 +185,7 @@ print(f'Accuracy on the original test set: {round(accuracy, 4)*100:3.4f}%')
 # loop through the test set
 for i in range(0, len(X_test)):
     for j in range(1):
-        noise = np.random.normal(0, 0.15, len(X_test.iloc[i])-2)
+        noise = np.random.normal(0, 1, len(X_test.iloc[i])-2)
 
         X_test.iloc[i][2:] = X_test.iloc[i][2:] + noise
         new_patient = X_test.iloc[i]
