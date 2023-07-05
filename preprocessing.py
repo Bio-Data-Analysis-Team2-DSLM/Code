@@ -15,6 +15,7 @@ df_scores['age'] = df_scores['age'].replace(["20-24", "25-29", "30-34", "35-39",
                                                 "55-59", "60-64","65-69"], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 df_scores['edu'] = df_scores['edu'].replace(["6-10", "11-15", "16-20"], [1, 2, 3])
 
+
 df_scores1 = df_scores.drop(['madrs1', 'madrs2', 'days', 'afftype', 'melanch', 'inpatient', 'edu', \
                             'marriage', 'work', 'number'], axis=1)
 

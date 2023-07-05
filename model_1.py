@@ -28,6 +28,9 @@ dataset = dataset[cols[0:2]+cols[3:]+[cols[2]]]
 y = dataset['target']
 X = dataset.drop(['target'], axis=1)
 
+# save X and y in one csv
+dataset.to_csv('Data/dataset_before_scaling.csv', index=False)
+
 # rescale the features
 scaler = StandardScaler()
 scaler.fit(X['age'].values.reshape(-1, 1))
@@ -38,7 +41,9 @@ for i in range(1, 11):
     scaler.fit(X[f'f{i}'].values.reshape(-1, 1))
     X[f'f{i}'] = scaler.transform(X[f'f{i}'].values.reshape(-1, 1))
 
-
+# save X and y in one csv
+dataset = pd.concat([X, y], axis=1)
+dataset.to_csv('Data/dataset_after_scaling.csv', index=False)
 
 #------------------------------------------------------------------#
 #------------------------------------------------------------------#
@@ -106,6 +111,7 @@ X_test_ = torch.tensor(X_test.values, dtype=torch.float32)
 y_train_ = torch.tensor(y_train.values, dtype=torch.float32)
 y_test_ = torch.tensor(y_test.values, dtype=torch.float32)
 
+
 # create the loss function and the optimizer. We will use MSE loss function
 criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 #optimizer = torch.optim.Adam(net.parameters(), lr=0.1, weight_decay=0)
@@ -160,13 +166,16 @@ with torch.no_grad():
 correct = 0
 total = 0
 correct_predictions = []
+prediction = []
 with torch.no_grad():
     predictions = net.forward(X_test_)
     for i in range(len(y_test_)):
         if predictions[i] >= 0.5:
             y_pred = 1
+            prediction.append(1)
         else:
             y_pred = 0
+            prediction.append(0)
         if y_pred == y_test_[i]:
             correct += 1
             print(f'correct prediction: {i}')
@@ -253,11 +262,19 @@ torch.save(net.state_dict(), 'outputs/model_1/NN_weights.pt')
 
 
 # merge X_test with y_test and save it to csv
-X_test_df = pd.DataFrame(X_test)
-y_test_df = pd.DataFrame(y_test)
-
+X_test_df = pd.DataFrame(X_test_)
+y_test_df = pd.DataFrame(y_test_)
+predictions_df = pd.DataFrame(prediction)
 # merge X_test_df with y_test_df
-test_df = pd.concat([X_test_df, y_test_df], axis=1)
+test_df = pd.concat([X_test_df, y_test_df, predictions_df], axis=1, ignore_index=True)
+
 
 # save the test_df to csv
-test_df.to_csv('outputs/model_1/test_df.csv', index=False, header=True)
+test_df.to_csv('outputs/model_1/test_df.csv', index=False, header=['gender', 'age', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', \
+                                                                    'f7', 'f8', 'f9', 'f10', 'target', 'prediction'])
+
+
+
+
+
+
