@@ -28,19 +28,6 @@ dataset = dataset[cols[0:2]+cols[3:]+[cols[2]]]
 y = dataset['target']
 X = dataset.drop(['target'], axis=1)
 
-# we will add noise to the features and we will create new patients
-for i in range(0, 55):
-     for j in range(0, 10):
-        noise = np.random.normal(0, 0.1, len(X.iloc[i]))
-        new_patient = X.iloc[i] + noise
-        new_patient = pd.DataFrame(new_patient).T
-        X = pd.concat([X, new_patient], axis=0, ignore_index=True)
-        y = pd.concat([y, pd.Series([y[i]])], axis=0, ignore_index=True)
-
-print()
-print(f'Now we have {len(X)} patients')
-print('-----------------------------')
-
 #------------------------------------------------------------------#
 #------------------------------------------------------------------#
 #------------------------------------------------------------------#
@@ -63,11 +50,33 @@ class Net(nn.Module):
         # we have classification problem so we will use sigmoid function
         x = torch.sigmoid(self.fc3(x))
         return x
-    
+
+# set the seeds
+torch.manual_seed(42)
+np.random.seed(42)
+
+# create the model
 net = Net()
 
-# split the data to train and test
+# split the data to train and test and reset the indices
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train = X_train.reset_index(drop=True)
+X_test = X_test.reset_index(drop=True)
+y_train = y_train.reset_index(drop=True)
+y_test = y_test.reset_index(drop=True)
+
+# we will add noise to the features and we will create new patients
+# loop through the train set
+for i in range(0, len(X_train)):
+    noise = np.random.normal(0, 0.1, len(X_train.iloc[i]))
+    new_patient = X_train.iloc[i] + noise
+    new_patient = pd.DataFrame(new_patient).T
+    X_train = pd.concat([X_train, new_patient], axis=0, ignore_index=True)
+    y_train = pd.concat([y_train, pd.Series([y_train[i]])], axis=0, ignore_index=True)
+
+print()
+print(f'Now we have {len(X_train)} patients in the trainig set')
+print('-----------------------------')
 
 # convert the data to tensors
 X_train = torch.tensor(X_train.values, dtype=torch.float32)
@@ -75,15 +84,12 @@ X_test = torch.tensor(X_test.values, dtype=torch.float32)
 y_train = torch.tensor(y_train.values, dtype=torch.float32)
 y_test = torch.tensor(y_test.values, dtype=torch.float32)
 
-# set the seeds
-torch.manual_seed(42)
-
 # create the loss function and the optimizer. We will use MSE loss function
 criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 #optimizer = torch.optim.Adam(net.parameters(), lr=0.1, weight_decay=0)
 # another optimizer that we can use is SGD
 ################            ################         ################
-hyperparameters = {'lr': 0.01, 'weight_decay': 0.00001, 'momentum': 0.8}
+hyperparameters = {'lr': 0.01, 'weight_decay': 0.0001, 'momentum': 0.8}
 ################            ################         ################
 optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
 
@@ -149,4 +155,9 @@ df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameter
                                     hyperparameters['momentum'], accuracy]], columns=['epochs', 'lr', \
                                     'weight_decay', 'momentum', 'accuracy'])], axis=0, ignore_index=True)
 df.to_csv('Data/NN_hyperparameters.csv', index=False, header=True)
+
+
+# save the model's weights in order to plot the features with their weights
+torch.save(net.state_dict(), 'Data/NN_weights.pt')
+
 

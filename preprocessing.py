@@ -15,22 +15,45 @@ df_scores['age'] = df_scores['age'].replace(["20-24", "25-29", "30-34", "35-39",
                                                 "55-59", "60-64","65-69"], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 df_scores['edu'] = df_scores['edu'].replace(["6-10", "11-15", "16-20"], [1, 2, 3])
 
-df_scores = df_scores.drop(['madrs1', 'madrs2', 'days', 'afftype', 'melanch', 'inpatient', 'edu', \
+df_scores1 = df_scores.drop(['madrs1', 'madrs2', 'days', 'afftype', 'melanch', 'inpatient', 'edu', \
                             'marriage', 'work', 'number'], axis=1)
 
 
 # create a target column
-df_scores['target'] = 0
+df_scores1['target'] = 0
 
 # set the target to 1 if the patient is healthy and 0 if the patient is depressed
 for i in range(1, 24):
-    df_scores['target'][i] = 0
+    df_scores1['target'][i] = 0
 
 for i in range(1, 33):
-    df_scores['target'][i+23] = 1
+    df_scores1['target'][i+23] = 1
 
 # save scores to csv 
-df_scores.to_csv('Data/scores_for classification_1.csv', index=False)
+df_scores1.to_csv('Data/scores_for classification_1.csv', index=False)
+
+df_scores2 = df_scores.drop(['madrs1', 'madrs2', 'days', 'number', 'edu', 'marriage', \
+                             'work'], axis=1)
+
+# there ar no enough patients with melancholic depression
+# so we will remove this column as well
+df_scores2 = df_scores2.drop(['melanch'], axis=1)
+
+df_scores2['target'] = 0
+
+for i in range(1, 24):
+    df_scores2['target'][i] = 0
+
+for i in range(25, 55):
+    # remove the patients
+    df_scores2 = df_scores2.drop([i], axis=0)
+
+# patients 23 and 24 have missing values
+df_scores2 = df_scores2.drop([23, 24], axis=0)
+
+print(df_scores2)
+# save scores to csv
+df_scores2.to_csv('Data/scores_for classification_2.csv', index=False)
 
 # healthy = 1, depressed = 0
 for i in range(1, 24):
