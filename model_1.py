@@ -94,16 +94,17 @@ for i in range(0, len(X_train)):
 
 
 
+
 print()
 print(f'Now we have {len(X_train)} patients in the trainig set')
 print(f'And {len(X_test)} patients in the test set')
 print('-----------------------------')
 
 # convert the data to tensors
-X_train = torch.tensor(X_train.values, dtype=torch.float32)
-X_test = torch.tensor(X_test.values, dtype=torch.float32)
-y_train = torch.tensor(y_train.values, dtype=torch.float32)
-y_test = torch.tensor(y_test.values, dtype=torch.float32)
+X_train_ = torch.tensor(X_train.values, dtype=torch.float32)
+X_test_ = torch.tensor(X_test.values, dtype=torch.float32)
+y_train_ = torch.tensor(y_train.values, dtype=torch.float32)
+y_test_ = torch.tensor(y_test.values, dtype=torch.float32)
 
 # create the loss function and the optimizer. We will use MSE loss function
 criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
@@ -112,7 +113,7 @@ criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 
 ################            ################         ################
 
-hyperparameters = {'lr': 0.0025, 'weight_decay': 0.05, 'momentum': 0.5}
+hyperparameters = {'lr': 0.001, 'weight_decay': 0.0001, 'momentum': 0.9}
 lr_decay = 0.9   # 1 is for no decay
 
 ################            ################         ################
@@ -126,9 +127,9 @@ loss_values = []
 
 for i in range(epochs):
     i += 1
-    y_pred = net.forward(X_train)
+    y_pred = net.forward(X_train_)
 
-    loss = criterion(y_pred, y_train.unsqueeze(1).float())
+    loss = criterion(y_pred, y_train_.unsqueeze(1).float())
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -152,14 +153,61 @@ plt.show()
 
 # test the model
 with torch.no_grad():
-    y_val = net.forward(X_test)
-    loss = criterion(y_val, y_test.unsqueeze(1).float())
-print(f'loss = {loss:.3f}')
+    y_val = net.forward(X_test_)
+    loss = criterion(y_val, y_test_.unsqueeze(1).float())
 
 # calculate the accuracy
 correct = 0
 total = 0
 correct_predictions = []
+with torch.no_grad():
+    predictions = net.forward(X_test_)
+    for i in range(len(y_test_)):
+        if predictions[i] >= 0.5:
+            y_pred = 1
+        else:
+            y_pred = 0
+        if y_pred == y_test_[i]:
+            correct += 1
+            print(f'correct prediction: {i}')
+            correct_predictions.append(i)
+        total += 1
+print()
+accuracy = correct/total
+print(f'loss on the original test set = {loss:.3f}')
+print(f'Accuracy on the original test set: {round(accuracy, 4)*100:3.4f}%')
+
+
+# We also want to check if our model is sensitive to small changes in the input
+# because we use momentum in the optimizer, which could make our model more robust
+# to small changes in the input
+
+# loop through the test set
+for i in range(0, len(X_test)):
+    for j in range(1):
+        noise = np.random.normal(0, 0.15, len(X_test.iloc[i])-2)
+
+        X_test.iloc[i][2:] = X_test.iloc[i][2:] + noise
+        new_patient = X_test.iloc[i]
+        new_patient = pd.DataFrame(new_patient).T
+
+        X_test = pd.concat([X_test, new_patient], axis=0, ignore_index=True)
+        y_test = pd.concat([y_test, pd.Series([y_test[i]])], axis=0, ignore_index=True)
+
+# convert the data to tensors
+X_test = torch.tensor(X_test.values, dtype=torch.float32)
+y_test = torch.tensor(y_test.values, dtype=torch.float32)
+
+# test the model
+with torch.no_grad():
+    y_val = net.forward(X_test)
+    loss2 = criterion(y_val, y_test.unsqueeze(1).float())
+print()
+print(f'loss of the noisy test set = {loss2:.3f}')
+
+# calculate the accuracy
+correct = 0
+total = 0
 with torch.no_grad():
     predictions = net.forward(X_test)
     for i in range(len(y_test)):
@@ -169,28 +217,47 @@ with torch.no_grad():
             y_pred = 0
         if y_pred == y_test[i]:
             correct += 1
-            print(f'correct prediction: {i}')
-            correct_predictions.append(i)
         total += 1
+
+accuracy2 = correct/total
+print(f'Accuracy on the noisy test set: {round(accuracy2, 4)*100:3.4f}%')
 print()
-accuracy = correct/total
-print(f'Accuracy: {round(accuracy, 4)*100:3.4f}%')
+
+# check if the accurasy of the noisy test set is lower than the 0.8*accuracy of the original test set
+if accuracy2 < 0.92*accuracy:
+    print('The model is sensitive to small changes in the input')
+    a = 'fail'
+else:
+    print('The model is not sensitive to small changes in the input')
+    a = 'pass'
 
 
 # csv with colums: epochs, lr, weight_decay, momentum, accuracy
 # in order to find the best hyperparameters
-df = pd.read_csv('Data/NN_hyperparameters.csv')
-# accuracy column is the 6th column
-# and lr_decay is the last column
-# we will interchange these two columns positions
+df = pd.read_csv('outputs/model_1/NN_hyperparameters.csv')
+# add sensitivity column
+df['sensitivity'] = ''
+
 
 df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameters['weight_decay'], \
-                                    hyperparameters['momentum'], accuracy, lr_decay, correct_predictions]], columns=['epochs', 'lr', \
-                                    'weight_decay', 'momentum', 'accuracy', 'lr_decay', 'correct_predictions'])], axis=0, ignore_index=True)
-cols = list(df.columns)
-df = df[cols[0:4]+[cols[6]]+[cols[5]]+[cols[4]]]
-df.to_csv('Data/NN_hyperparameters.csv', index=False, header=True)
+                                    hyperparameters['momentum'], lr_decay, correct_predictions, accuracy, a]], columns=['epochs', 'lr', \
+                                    'weight_decay', 'momentum', 'lr_decay', 'correct_predictions', 'accuracy', 'sensitivity'])], axis=0, ignore_index=True)
 
+df.to_csv('outputs/model_1/NN_hyperparameters.csv', index=False, header=True)
 
 # save the model's weights in order to plot the features with their weights
-torch.save(net.state_dict(), 'Data/NN_weights.pt')
+torch.save(net.state_dict(), 'outputs/model_1/NN_weights.pt')
+
+
+# merge X_test with y_test and save it to csv
+X_test_df = pd.DataFrame(X_test)
+y_test_df = pd.DataFrame(y_test)
+
+# merge X_test_df with y_test_df
+test_df = pd.concat([X_test_df, y_test_df], axis=1)
+
+# save the test_df to csv
+test_df.to_csv('outputs/model_1/test_df.csv', index=False, header=True)
+
+
+
