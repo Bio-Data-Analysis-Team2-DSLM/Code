@@ -28,6 +28,18 @@ dataset = dataset[cols[0:2]+cols[3:]+[cols[2]]]
 y = dataset['target']
 X = dataset.drop(['target'], axis=1)
 
+# rescale the features
+scaler = StandardScaler()
+scaler.fit(X['age'].values.reshape(-1, 1))
+X['age'] = scaler.transform(X['age'].values.reshape(-1, 1))
+scaler.fit(X['gender'].values.reshape(-1, 1))
+X['gender'] = scaler.transform(X['gender'].values.reshape(-1, 1))
+for i in range(1, 11):
+    scaler.fit(X[f'f{i}'].values.reshape(-1, 1))
+    X[f'f{i}'] = scaler.transform(X[f'f{i}'].values.reshape(-1, 1))
+
+
+
 #------------------------------------------------------------------#
 #------------------------------------------------------------------#
 #------------------------------------------------------------------#
@@ -59,7 +71,7 @@ np.random.seed(42)
 net = Net()
 
 # split the data to train and test and reset the indices
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 X_train = X_train.reset_index(drop=True)
 X_test = X_test.reset_index(drop=True)
 y_train = y_train.reset_index(drop=True)
@@ -67,15 +79,24 @@ y_test = y_test.reset_index(drop=True)
 
 # we will add noise to the features and we will create new patients
 # loop through the train set
+
+
 for i in range(0, len(X_train)):
-    noise = np.random.normal(0, 0.1, len(X_train.iloc[i]))
-    new_patient = X_train.iloc[i] + noise
-    new_patient = pd.DataFrame(new_patient).T
-    X_train = pd.concat([X_train, new_patient], axis=0, ignore_index=True)
-    y_train = pd.concat([y_train, pd.Series([y_train[i]])], axis=0, ignore_index=True)
+    for j in range(1):
+        noise = np.random.normal(0, 1.2, len(X_train.iloc[i])-2)
+
+        X_train.iloc[i][2:] = X_train.iloc[i][2:] + noise
+        new_patient = X_train.iloc[i]
+        new_patient = pd.DataFrame(new_patient).T
+
+        X_train = pd.concat([X_train, new_patient], axis=0, ignore_index=True)
+        y_train = pd.concat([y_train, pd.Series([y_train[i]])], axis=0, ignore_index=True)
+
+
 
 print()
 print(f'Now we have {len(X_train)} patients in the trainig set')
+print(f'And {len(X_test)} patients in the test set')
 print('-----------------------------')
 
 # convert the data to tensors
@@ -88,14 +109,19 @@ y_test = torch.tensor(y_test.values, dtype=torch.float32)
 criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 #optimizer = torch.optim.Adam(net.parameters(), lr=0.1, weight_decay=0)
 # another optimizer that we can use is SGD
+
 ################            ################         ################
-hyperparameters = {'lr': 0.01, 'weight_decay': 0.0001, 'momentum': 0.8}
+
+hyperparameters = {'lr': 0.0025, 'weight_decay': 0.05, 'momentum': 0.5}
+lr_decay = 0.9   # 1 is for no decay
+
 ################            ################         ################
+
 optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
 
 
 # train the model
-epochs = 30000
+epochs = 60000
 loss_values = []
 
 for i in range(epochs):
@@ -113,7 +139,7 @@ for i in range(epochs):
     # decrease the learning rate every 300 epochs
     if i % 1000 == 0:
         for g in optimizer.param_groups:
-            g['lr'] = g['lr'] * 0.95
+            g['lr'] = g['lr'] * lr_decay
 
 # plot the loss
 import matplotlib.pyplot as plt
@@ -133,7 +159,7 @@ print(f'loss = {loss:.3f}')
 # calculate the accuracy
 correct = 0
 total = 0
-
+correct_predictions = []
 with torch.no_grad():
     predictions = net.forward(X_test)
     for i in range(len(y_test)):
@@ -143,21 +169,28 @@ with torch.no_grad():
             y_pred = 0
         if y_pred == y_test[i]:
             correct += 1
+            print(f'correct prediction: {i}')
+            correct_predictions.append(i)
         total += 1
 print()
 accuracy = correct/total
-print(f'Accuracy: {round(accuracy, 3)*100}%')
+print(f'Accuracy: {round(accuracy, 4)*100:3.4f}%')
+
 
 # csv with colums: epochs, lr, weight_decay, momentum, accuracy
 # in order to find the best hyperparameters
 df = pd.read_csv('Data/NN_hyperparameters.csv')
+# accuracy column is the 6th column
+# and lr_decay is the last column
+# we will interchange these two columns positions
+
 df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameters['weight_decay'], \
-                                    hyperparameters['momentum'], accuracy]], columns=['epochs', 'lr', \
-                                    'weight_decay', 'momentum', 'accuracy'])], axis=0, ignore_index=True)
+                                    hyperparameters['momentum'], accuracy, lr_decay, correct_predictions]], columns=['epochs', 'lr', \
+                                    'weight_decay', 'momentum', 'accuracy', 'lr_decay', 'correct_predictions'])], axis=0, ignore_index=True)
+cols = list(df.columns)
+df = df[cols[0:4]+[cols[6]]+[cols[5]]+[cols[4]]]
 df.to_csv('Data/NN_hyperparameters.csv', index=False, header=True)
 
 
 # save the model's weights in order to plot the features with their weights
 torch.save(net.state_dict(), 'Data/NN_weights.pt')
-
-
