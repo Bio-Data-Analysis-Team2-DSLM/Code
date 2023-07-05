@@ -113,7 +113,7 @@ criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 
 ################            ################         ################
 
-hyperparameters = {'lr': 0.001, 'weight_decay': 0.0001, 'momentum': 0.9}
+hyperparameters = {'lr': 0.01, 'weight_decay': 1e-5, 'momentum': 0.9}
 lr_decay = 0.9   # 1 is for no decay
 
 ################            ################         ################
@@ -235,15 +235,18 @@ else:
 # csv with colums: epochs, lr, weight_decay, momentum, accuracy
 # in order to find the best hyperparameters
 df = pd.read_csv('outputs/model_1/NN_hyperparameters.csv')
-# add sensitivity column
-df['sensitivity'] = ''
+
 
 
 df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameters['weight_decay'], \
                                     hyperparameters['momentum'], lr_decay, correct_predictions, accuracy, a]], columns=['epochs', 'lr', \
                                     'weight_decay', 'momentum', 'lr_decay', 'correct_predictions', 'accuracy', 'sensitivity'])], axis=0, ignore_index=True)
 
+# change the order of the columns
+df = df[['epochs', 'lr', 'weight_decay', 'momentum', 'lr_decay', 'correct_predictions', 'accuracy', 'sensitivity']]
+
 df.to_csv('outputs/model_1/NN_hyperparameters.csv', index=False, header=True)
+
 
 # save the model's weights in order to plot the features with their weights
 torch.save(net.state_dict(), 'outputs/model_1/NN_weights.pt')
@@ -258,6 +261,3 @@ test_df = pd.concat([X_test_df, y_test_df], axis=1)
 
 # save the test_df to csv
 test_df.to_csv('outputs/model_1/test_df.csv', index=False, header=True)
-
-
-
