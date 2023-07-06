@@ -6,17 +6,14 @@ from sklearn.preprocessing import StandardScaler
 
 data = pd.read_csv('Data/action_cnn.csv')
 first_row = pd.read_csv('Data/first_row_for_each_patient.csv')
-print(first_row)
 
 data = pd.DataFrame(data)
-print(data)
 data = data.drop(['patient'], axis=1)
 
 # create a new column which will assign the same number to every 48 rows
 data['patient'] = 0
 for i in range(0, 49392, 48):
     data.loc[i:i+48, 'patient'] = i/48 + 1
-print(data)
 
 # find the fist patient with target 1
 for i in range(0, 49392, 48):
@@ -93,7 +90,7 @@ torch.manual_seed(88)
 np.random.seed(44)
 
 # define the model
-model = CNN(20)
+model = CNN(30)
 
 # set the initial weights of the model
 def init_weights(m):
@@ -106,7 +103,7 @@ model.apply(init_weights)
 # define the loss function
 loss_function = nn.MSELoss()
 # define the optimizer - Adam
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
 
 # train the model
 epochs = 20000
@@ -138,7 +135,7 @@ y = [i[1] for i in loss_values]
 plt.plot(x, y)
 plt.show()
 # save the loss picture
-plt.savefig('Data/loss_values_CNN.jpg')
+plt.savefig('Data/loss_values_CNN.png')
 
 # save the extracted features as a new dataframe
 features = model.encoder(X).detach().numpy()
@@ -147,8 +144,6 @@ features = features.reshape(-1, model.a)
 headers = ['f' + str(i) for i in range(1, model.a + 1)]
 # add the headers to the dataframe
 features = pd.DataFrame(features, columns=headers)
-# add the target column
-features['target'] = data['target']
 
 features.to_csv('Data/extracted_features.csv', index=False, header=True)
 
