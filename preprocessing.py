@@ -1,11 +1,5 @@
 # import libraries
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-
 
 data = pd.DataFrame()
 
