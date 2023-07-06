@@ -21,9 +21,12 @@ for i in range(0, 55):
     features[i] = features[i].split(", ")
     features[i] = list(map(int, features[i]))
 
-# simplify features by taking the mean of every 100 values in a list
+# simplify features by taking the mean of every 30 values in a list
+# smooothing the data 
+
 for i in range(0, 55):
-    features[i] = [sum(features[i][j:j+120])/120 for j in range(0, len(features[i]), 120)]
+    features[i] = [sum(features[i][j:j+30])/30 for j in range(0, len(features[i]), 30)]
+
 
 # the lists are not of the same length
 # so we need to pad them with the mean of the list
@@ -42,6 +45,7 @@ for i in range(0, 55):
         for isnan in range(0, max_len-len(features[i])):
             mean = sum(features[i])/len(features[i])
             features[i].append(mean)
+
 
 # normalize the data to have mean 0 and std 1 for every list of features 
 for i in range(0, 55):
@@ -142,7 +146,7 @@ plt.savefig('Data/loss_values_CNN.jpg')
 
 # save the extracted features as a new dataframe
 features = model.encoder(X).detach().numpy()
-features = features.reshape(-1, 10)
+features = features.reshape(-1, 20)
 # create a dataframe with headers f1, f2, ..., f10
 headers = ['f' + str(i) for i in range(1, 11)]
 # add the headers to the dataframe
