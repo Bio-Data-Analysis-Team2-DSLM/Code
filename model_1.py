@@ -13,16 +13,19 @@ from sklearn.model_selection import train_test_split
 
 data = pd.DataFrame()
 
-df_scores_1 = pd.read_csv('Data/scores_for classification_1.csv')
-
+#df_scores_1 = pd.read_csv('Data/scores_for classification_1.csv')
 df_features = pd.read_csv('Data/extracted_features.csv')
+# add the target column to the features
+df_features['target'] = 0
+# assign the first 359 patients (17232/48) to 0 and the rest to 1
+for i in range(0, 359):
+    df_features['target'][i] = 0
+for i in range(359, 1029):
+    df_features['target'][i] = 1
 
-# merge the scores with the features
-dataset = pd.concat([df_scores_1, df_features], axis=1)
-
-# move the target column to the end of the dataframe
-cols = list(dataset.columns)
-dataset = dataset[cols[0:2]+cols[3:]+[cols[2]]]
+dataset = df_features
+# save the dataset to csv
+dataset.to_csv('Final/dataset_1.csv', index=False)
 
 # split to features and targets
 y = dataset['target']
@@ -31,15 +34,8 @@ X = dataset.drop(['target'], axis=1)
 # save X and y in one csv
 dataset.to_csv('Data/dataset_before_scaling.csv', index=False)
 
-# rescale the features
-scaler = StandardScaler()
-scaler.fit(X['age'].values.reshape(-1, 1))
-X['age'] = scaler.transform(X['age'].values.reshape(-1, 1))
-scaler.fit(X['gender'].values.reshape(-1, 1))
-X['gender'] = scaler.transform(X['gender'].values.reshape(-1, 1))
-for i in range(1, 11):
-    scaler.fit(X[f'f{i}'].values.reshape(-1, 1))
-    X[f'f{i}'] = scaler.transform(X[f'f{i}'].values.reshape(-1, 1))
+# balance the dataset
+
 
 # save X and y in one csv
 dataset = pd.concat([X, y], axis=1)
