@@ -61,15 +61,16 @@ X = X.view(1029, 1, 48)
 # we create a model of 1D CNN with pytorch which will extract features from the data
 # so that we use the extracted featurea in a NN for classification
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self, a):
         super().__init__()
+        self.a = a
         self.encoder = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=1, kernel_size=1),
             nn.ReLU(),
-            nn.Linear(48, 10))
+            nn.Linear(48, a))
         
         self.decoder = nn.Sequential(
-            nn.Linear(10, 48),
+            nn.Linear(a, 48),
             nn.ReLU(),
             nn.ConvTranspose1d(in_channels=1, out_channels=1, kernel_size=1))
 
@@ -84,7 +85,7 @@ torch.manual_seed(88)
 np.random.seed(44)
 
 # define the model
-model = CNN()
+model = CNN(20)
 
 # set the initial weights of the model
 def init_weights(m):
@@ -97,10 +98,10 @@ model.apply(init_weights)
 # define the loss function
 loss_function = nn.MSELoss()
 # define the optimizer
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0005)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.00005)
 
 # train the model
-epochs = 12000
+epochs = 10000
 loss_values = []
 
 for i in range(epochs):
@@ -133,9 +134,9 @@ plt.savefig('Data/loss_values_CNN.jpg')
 
 # save the extracted features as a new dataframe
 features = model.encoder(X).detach().numpy()
-features = features.reshape(-1, 10)
+features = features.reshape(-1, model.a)
 # create a dataframe with headers f1, f2, ..., f10
-headers = ['f' + str(i) for i in range(1, 11)]
+headers = ['f' + str(i) for i in range(1, model.a + 1)]
 # add the headers to the dataframe
 features = pd.DataFrame(features, columns=headers)
 features.to_csv('Data/extracted_features.csv', index=False, header=True)
