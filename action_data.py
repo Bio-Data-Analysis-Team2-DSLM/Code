@@ -36,7 +36,7 @@ data['timestamp'] = data['timestamp'].str[11:]
 data['timestamp'] = pd.to_datetime(data['timestamp'], format='%H:%M:%S').dt.time
 
 
-# ςε remove the rowss before the first 00:00:00 and after the last 00:00:00 for each patient
+# we remove the rows before the first 00:00:00 and after the last 00:00:00 for each patient
 for i in range(1, 56):
     df = data[data['patient'] == i]
     df = df.reset_index(drop=True)
@@ -44,14 +44,16 @@ for i in range(1, 56):
         if df['timestamp'][j] == pd.to_datetime('00:00:00', format='%H:%M:%S').time():
             first_index = j
             break
-    for j in range(len(df)-1, -1, -1):
+    for j in range(len(df)):
         if df['timestamp'][j] == pd.to_datetime('00:00:00', format='%H:%M:%S').time():
             last_index = j
             break
 
     df = df[first_index:last_index]
     df = df.reset_index(drop=True)
-    data = data.drop(data[data['patient'] == i].index)
     data = pd.concat([data, df], axis=0)
 
-data.to_csv('Data/action.csv', index=False)
+data = data.reset_index(drop=True)
+data.to_csv('Data/action.csv')
+
+print(data)
