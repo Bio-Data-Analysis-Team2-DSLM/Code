@@ -9,7 +9,7 @@ first_row = pd.read_csv('Data/first_row_for_each_patient.csv')
 
 data = pd.DataFrame(data)
 data = data.drop(['patient'], axis=1)
-
+print(data)
 # create a new column which will assign the same number to every 48 rows
 data['patient'] = 0
 for i in range(0, 49392, 48):
