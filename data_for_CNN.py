@@ -46,6 +46,29 @@ for i in range(1, 56):
     #print(df)
     data3 = pd.concat([data3, df], axis=0)
 
+
 data3 = data3.reset_index(drop=True)
 print(data3)
 data3.to_csv('Data/action_cnn.csv', index=False)
+
+# find the index for the first and the last day for every patient
+
+last_day = []
+
+for i in range(1, 56):
+    df = data3[data3['patient'] == i]
+    df = df.reset_index(drop=True)
+    last_day.append(df.index[-1])
+
+
+first_day = [0]
+
+for i in range(1, 55):
+    first_day.append(first_day[i-1] + last_day[i-1] + 1)
+
+print(first_day)
+header = ['first_day']
+
+# save the first day to a csv file
+df = pd.DataFrame(first_day, columns=header)
+df.to_csv('Data/first_row_for_each_patient.csv', index=False)
