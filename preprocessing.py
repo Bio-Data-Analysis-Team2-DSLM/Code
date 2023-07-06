@@ -54,7 +54,7 @@ df_scores2.to_csv('Data/scores_for classification_2.csv', index=False)
 
 # healthy = 1, depressed = 0
 for i in range(1, 24):
-    file = 'data/condition/condition_' + str(i) + '.csv'
+    file = 'Data/condition/condition_' + str(i) + '.csv'
     df = pd.read_csv(file)
     df['patient'] = i
     df['target'] = 0
