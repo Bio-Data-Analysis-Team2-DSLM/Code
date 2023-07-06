@@ -49,6 +49,8 @@ for i in range(25, 55):
     # remove the patients
     df_scores2 = df_scores2.drop([i], axis=0)
 
+print(df_scores2)
+
 # patients 23 and 24 have missing values
 df_scores2 = df_scores2.drop([23, 24], axis=0)
 
