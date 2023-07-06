@@ -14,7 +14,7 @@ data = pd.DataFrame()
 
 # healthy = 1, depressed = 0
 for i in range(1, 24):
-    file = 'data/condition/condition_' + str(i) + '.csv'
+    file = 'Data/condition/condition_' + str(i) + '.csv'
     df = pd.read_csv(file)
     df['patient'] = i
     df['target'] = 0
@@ -30,30 +30,39 @@ for i in range(1, 33):
 
     data = pd.concat([data, df], axis=0)
 
-data = data.drop([ 'date'], axis=1)
+data = data.drop(['date'], axis=1)
+#print(data)
 
 data['timestamp'] = data['timestamp'].str[11:]
 data['timestamp'] = pd.to_datetime(data['timestamp'], format='%H:%M:%S').dt.time
 
 
+#for i in range(1, 56):
+   # print(data[data['patient'] == i])
+
+
 # we remove the rows before the first 00:00:00 and after the last 00:00:00 for each patient
+data2 = pd.DataFrame()
 for i in range(1, 56):
+    #print(data[data['patient'] == i])
     df = data[data['patient'] == i]
+    patient = i
     df = df.reset_index(drop=True)
-    for j in range(len(df)):
+
+    for j in range(0, len(df)):
         if df['timestamp'][j] == pd.to_datetime('00:00:00', format='%H:%M:%S').time():
-            first_index = j
-            break
-    for j in range(len(df)):
-        if df['timestamp'][j] == pd.to_datetime('00:00:00', format='%H:%M:%S').time():
-            last_index = j
+            first = j
             break
 
-    df = df[first_index:last_index]
-    df = df.reset_index(drop=True)
-    data = pd.concat([data, df], axis=0)
+    for j in range(len(df)-1, -1, -1):
+        if df['timestamp'][j] == pd.to_datetime('23:59:00', format='%H:%M:%S').time():
+            last = j
+            break
+    df['patient'] = patient
+    df = df[first:last+1]
+    #df = df.reset_index(drop=True)
+    #data = data.drop(data[data['patient'] == i].index)
+    data2 = pd.concat([data2, df], axis=0)
 
-data = data.reset_index(drop=True)
-data.to_csv('Data/action.csv')
-
-print(data)
+data2 = data2.reset_index(drop=True)
+data2.to_csv('Data/action.csv', index=False)
