@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import balance_dataset
 
 
 data = pd.DataFrame()
@@ -19,13 +20,24 @@ df_features = pd.read_csv('Data/extracted_features.csv')
 df_features['target'] = 0
 # assign the first 359 patients (17232/48) to 0 and the rest to 1
 for i in range(0, 359):
-    df_features['target'][i] = 0
+    df_features.loc[i, 'target'] = 0
 for i in range(359, 1029):
-    df_features['target'][i] = 1
+    df_features.loc[i, 'target'] = 1
 
 dataset = df_features
 # save the dataset to csv
 dataset.to_csv('Final/dataset_1.csv', index=False)
+
+counts = dataset['target'].value_counts()
+print(f'Before balancing :{counts}')
+# balance the dataset
+dataset = balance_dataset.balance_dataset(dataset)
+counts = dataset['target'].value_counts()
+print(f'After: {counts}')
+
+# scale the data from all the features except the target
+scaler = StandardScaler()
+dataset.iloc[:, 1:-1] = scaler.fit_transform(dataset.iloc[:, 1:-1])
 
 # split to features and targets
 y = dataset['target']
@@ -33,8 +45,6 @@ X = dataset.drop(['target'], axis=1)
 
 # save X and y in one csv
 dataset.to_csv('Data/dataset_before_scaling.csv', index=False)
-
-# balance the dataset
 
 
 # save X and y in one csv
@@ -53,7 +63,7 @@ dataset.to_csv('Data/dataset_after_scaling.csv', index=False)
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(12, 4)
+        self.fc1 = nn.Linear(30, 4)
         self.fc2 = nn.Linear(4, 4)
         self.fc3 = nn.Linear(4, 1)
         
@@ -68,37 +78,20 @@ class Net(nn.Module):
 torch.manual_seed(42)
 np.random.seed(42)
 
-# create the model
-net = Net()
 
-# split the data to train and test and reset the indices
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# split the data to train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
 X_train = X_train.reset_index(drop=True)
 X_test = X_test.reset_index(drop=True)
 y_train = y_train.reset_index(drop=True)
 y_test = y_test.reset_index(drop=True)
 
-# we will add noise to the features and we will create new patients
-# loop through the train set
-
-
-for i in range(0, len(X_train)):
-    for j in range(1):
-        noise = np.random.normal(0, 1.2, len(X_train.iloc[i])-2)
-
-        X_train.iloc[i][2:] = X_train.iloc[i][2:] + noise
-        new_patient = X_train.iloc[i]
-        new_patient = pd.DataFrame(new_patient).T
-
-        X_train = pd.concat([X_train, new_patient], axis=0, ignore_index=True)
-        y_train = pd.concat([y_train, pd.Series([y_train[i]])], axis=0, ignore_index=True)
-
-
-
-
 print()
-print(f'Now we have {len(X_train)} patients in the trainig set')
-print(f'And {len(X_test)} patients in the test set')
+print(f'We have {len(X_train)} patients in the trainig set')
+print(f'and {len(X_test)} patients in the test set')
+print()
 print('-----------------------------')
 
 # convert the data to tensors
@@ -108,166 +101,140 @@ y_train_ = torch.tensor(y_train.values, dtype=torch.float32)
 y_test_ = torch.tensor(y_test.values, dtype=torch.float32)
 
 
+
 # create the loss function and the optimizer. We will use MSE loss function
 criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 #optimizer = torch.optim.Adam(net.parameters(), lr=0.1, weight_decay=0)
 # another optimizer that we can use is SGD
 
-################            ################         ################
+# run model_1.py for different hyperparameters 
+# and save the results in a csv file
+# lr = learning rate
+# wd = weight decay
+# mm = momentum
+# ld = learning rate decay
 
-hyperparameters = {'lr': 1e-2, 'weight_decay': 1e-5, 'momentum': 0.5}
-lr_decay = 0.9   # 1 is for no decay
-
-################            ################         ################
-
-optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
-
-
-# train the model
-epochs = 60000
-loss_values = []
-
-for i in range(epochs):
-    i += 1
-    y_pred = net.forward(X_train_)
-
-    loss = criterion(y_pred, y_train_.unsqueeze(1).float())
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    # print every 10 epochs
-    if i%1000 == 0:
-        print(f'epoch: {i:2}  loss: {loss.item():10.8f}')
-        loss_values.append([i, loss.item()])
-    # decrease the learning rate every 300 epochs
-    if i % 1000 == 0:
-        for g in optimizer.param_groups:
-            g['lr'] = g['lr'] * lr_decay
-
-# plot the loss
-import matplotlib.pyplot as plt
-x = [i[0] for i in loss_values]
-y = [i[1] for i in loss_values]
-plt.plot(x, y)
-plt.xlabel('epochs')
-plt.ylabel('loss')
-plt.show()
-
-# test the model
-with torch.no_grad():
-    y_val = net.forward(X_test_)
-    loss = criterion(y_val, y_test_.unsqueeze(1).float())
-
-# calculate the accuracy
-correct = 0
-total = 0
-correct_predictions = []
-prediction = []
-with torch.no_grad():
-    predictions = net.forward(X_test_)
-    for i in range(len(y_test_)):
-        if predictions[i] >= 0.5:
-            y_pred = 1
-            prediction.append(1)
-        else:
-            y_pred = 0
-            prediction.append(0)
-        if y_pred == y_test_[i]:
-            correct += 1
-            print(f'correct prediction: {i}')
-            correct_predictions.append(i)
-        total += 1
-print()
-accuracy = correct/total
-print(f'loss on the original test set = {loss:.3f}')
-print(f'Accuracy on the original test set: {round(accuracy, 4)*100:3.4f}%')
+for lr in [0.01, 0.001, 0.0001]:
+    for wd in [ 0.001, 0.0001, 0.00001]:
+        for mm in [0.5, 0.725, 0.9, 0.99]:
+            for ld in [1, 0.9]:
+                hyperparameters = {'lr': lr, 'weight_decay': wd, 'momentum': mm}
+                lr_decay = ld
+                print(f'lr = {lr}, wd = {wd}, mm = {mm}, ld = {ld}')
+                net = Net()
 
 
-# We also want to check if our model is sensitive to small changes in the input
-# because we use momentum in the optimizer, which could make our model more robust
-# to small changes in the input
+                hyperparameters = {'lr': lr, 'weight_decay': wd, 'momentum': mm}
+                lr_decay = ld
 
-# loop through the test set
-for i in range(0, len(X_test)):
-    for j in range(1):
-        noise = np.random.normal(0, 1, len(X_test.iloc[i])-2)
-
-        X_test.iloc[i][2:] = X_test.iloc[i][2:] + noise
-        new_patient = X_test.iloc[i]
-        new_patient = pd.DataFrame(new_patient).T
-
-        X_test = pd.concat([X_test, new_patient], axis=0, ignore_index=True)
-        y_test = pd.concat([y_test, pd.Series([y_test[i]])], axis=0, ignore_index=True)
-
-# convert the data to tensors
-X_test = torch.tensor(X_test.values, dtype=torch.float32)
-y_test = torch.tensor(y_test.values, dtype=torch.float32)
-
-# test the model
-with torch.no_grad():
-    y_val = net.forward(X_test)
-    loss2 = criterion(y_val, y_test.unsqueeze(1).float())
-print()
-print(f'loss of the noisy test set = {loss2:.3f}')
-
-# calculate the accuracy
-correct = 0
-total = 0
-with torch.no_grad():
-    predictions = net.forward(X_test)
-    for i in range(len(y_test)):
-        if predictions[i] >= 0.5:
-            y_pred = 1
-        else:
-            y_pred = 0
-        if y_pred == y_test[i]:
-            correct += 1
-        total += 1
-
-accuracy2 = correct/total
-print(f'Accuracy on the noisy test set: {round(accuracy2, 4)*100:3.4f}%')
-print()
-
-# check if the accurasy of the noisy test set is lower than the 0.8*accuracy of the original test set
-if accuracy2 < 0.92*accuracy:
-    print('The model is sensitive to small changes in the input')
-    a = 'fail'
-else:
-    print('The model is not sensitive to small changes in the input')
-    a = 'pass'
+                optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
 
 
-# csv with colums: epochs, lr, weight_decay, momentum, accuracy
-# in order to find the best hyperparameters
-df = pd.read_csv('outputs/model_1/NN_hyperparameters.csv')
+                # train the model
+                epochs = 10000
+                loss_values = []
+
+                from sklearn.model_selection import KFold
+
+                # Define the number of folds for cross-validation
+                num_folds = 5
+
+                # Create a KFold object
+                kf = KFold(n_splits=num_folds, shuffle=True)
+                for fold, (train_ids, val_ids) in enumerate(kf.split(X_train_)):
+                    X_train_fold = X_train_[train_ids]
+                    y_train_fold = y_train_[train_ids]
+                    X_val_fold = X_train_[val_ids]
+                    y_val_fold = y_train_[val_ids]
+
+
+                    for i in range(epochs):
+                        i += 1
+                        y_pred = net.forward(X_train_fold)
+
+                        loss = criterion(y_pred, y_train_fold.unsqueeze(1).float())
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
+                        # print every 10 epochs
+                        if i%1000 == 0:
+                            print(f'epoch: {i:2}  loss: {loss.item():10.8f}')
+                            loss_values.append([i, loss.item()])
+                        # decrease the learning rate every 300 epochs
+                        if i % 1000 == 0:
+                            for g in optimizer.param_groups:
+                                g['lr'] = g['lr'] * lr_decay
 
 
 
-df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameters['weight_decay'], \
-                                    hyperparameters['momentum'], lr_decay, correct_predictions, accuracy, a]], columns=['epochs', 'lr', \
-                                    'weight_decay', 'momentum', 'lr_decay', 'correct_predictions', 'accuracy', 'sensitivity'])], axis=0, ignore_index=True)
+                # test the model
+                with torch.no_grad():
+                    y_val = net.forward(X_test_)
+                    loss = criterion(y_val, y_test_.unsqueeze(1).float())
 
-# change the order of the columns
-df = df[['epochs', 'lr', 'weight_decay', 'momentum', 'lr_decay', 'correct_predictions', 'accuracy', 'sensitivity']]
+                # calculate the accuracy
+                correct = 0
+                total = 0
+                correct_predictions = []
+                prediction = []
+                with torch.no_grad():
+                    predictions = net.forward(X_test_)
+                    for i in range(len(y_test_)):
+                        if predictions[i] >= 0.5:
+                            y_pred = 1
+                            prediction.append(1)
+                        else:
+                            y_pred = 0
+                            prediction.append(0)
+                        if y_pred == y_test_[i]:
+                            correct += 1
+                            print(f'correct prediction: {i}')
+                            correct_predictions.append(i)
+                        total += 1
+                print()
+                accuracy = correct/total
+                print(f'loss on the test set = {loss:.3f}')
+                print(f'Accuracy on the test set: {round(accuracy, 4)*100:3.4f}%')
 
-df.to_csv('outputs/model_1/NN_hyperparameters.csv', index=False, header=True)
 
 
-# save the model's weights in order to plot the features with their weights
-torch.save(net.state_dict(), 'outputs/model_1/NN_weights.pt')
+                # csv with colums: epochs, lr, weight_decay, momentum, accuracy
+                # in order to find the best hyperparameters
+                df = pd.read_csv('outputs/model_1/NN_hyperparameters.csv')
 
 
-# merge X_test with y_test and save it to csv
-X_test_df = pd.DataFrame(X_test_)
-y_test_df = pd.DataFrame(y_test_)
-predictions_df = pd.DataFrame(prediction)
-# merge X_test_df with y_test_df
-test_df = pd.concat([X_test_df, y_test_df, predictions_df], axis=1, ignore_index=True)
+
+                df = pd.concat([df, pd.DataFrame([[epochs, hyperparameters['lr'], hyperparameters['weight_decay'], \
+                                                    hyperparameters['momentum'], lr_decay, accuracy]], columns=['epochs', 'lr', \
+                                                    'weight_decay', 'momentum', 'lr_decay',  'accuracy'])], axis=0, ignore_index=True)
+
+                # change the order of the columns
+                df = df[['epochs', 'lr', 'weight_decay', 'momentum', 'lr_decay',  'accuracy']]
+
+                df.to_csv('outputs/model_1/NN_hyperparameters.csv', index=False, header=True)
 
 
-# save the test_df to csv
-test_df.to_csv('outputs/model_1/test_df.csv', index=False, header=['gender', 'age', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', \
-                                                                    'f7', 'f8', 'f9', 'f10', 'target', 'prediction'])
+                # save the model's weights in order to plot the features with their weights
+                torch.save(net.state_dict(), 'outputs/model_1/NN_weights.pt')
+
+
+                # merge X_test with y_test and save it to csv
+                X_test_df = pd.DataFrame(X_test_)
+                y_test_df = pd.DataFrame(y_test_)
+                predictions_df = pd.DataFrame(prediction)
+                # merge X_test_df with y_test_df
+                test_df = pd.concat([X_test_df, y_test_df, predictions_df], axis=1, ignore_index=True)
+
+                # header
+                header = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', \
+                        'f9', 'f10', 'f11', 'f12', 'f13', 'f14', 'f15', 'f16', \
+                            'f17', 'f18', 'f19', 'f20', 'f21', 'f22', 'f23', 'f24', \
+                                'f25', 'f26', 'f27', 'f28', 'f29', 'f30', 'target', 'prediction']
+                
+                
+
+                # save the test_df to csv
+                test_df.to_csv('outputs/model_1/test_df.csv', index=False, header=header)
 
 
 
