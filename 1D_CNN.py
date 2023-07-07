@@ -15,6 +15,8 @@ data['patient'] = 0
 for i in range(0, 49392, 48):
     data.loc[i:i+48, 'patient'] = i/48 + 1
 
+
+
 # find the fist patient with target 1
 for i in range(0, 49392, 48):
     if data['target'][i] == 1:

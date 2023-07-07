@@ -6,7 +6,7 @@ def balance_dataset(data):
     min_count = class_counts.min()
 
     # Undersample the majority class
-    balanced_df = data.groupby('target').apply(lambda x: x.sample(n=min_count)).reset_index(drop=True)
+    balanced_df = data.groupby('target').apply(lambda x: x.sample(n=min_count, random_state = 2023)).reset_index(drop=True)
 
     # Drop the extra data from the majority class
     balanced_df.drop_duplicates(inplace=True)
