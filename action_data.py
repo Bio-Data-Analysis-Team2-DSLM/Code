@@ -37,9 +37,6 @@ data['timestamp'] = data['timestamp'].str[11:]
 data['timestamp'] = pd.to_datetime(data['timestamp'], format='%H:%M:%S').dt.time
 
 
-#for i in range(1, 56):
-   # print(data[data['patient'] == i])
-
 
 # we remove the rows before the first 00:00:00 and after the last 00:00:00 for each patient
 data2 = pd.DataFrame()
@@ -122,9 +119,33 @@ first_row = pd.read_csv('Data/first_row_for_each_patient.csv')
 for i in range(0, len(data), 48):
     data3.loc[i:i+48, 'patient_new'] = i/48 + 1
 
-print(data3)
+##################################################################
+##################################################################
+
+scores = pd.read_csv('Data/scores.csv')
+
+#create a column with patient number for every patient in the scores dataframe
+scores['patient'] = 0
+for i in range(0, len(scores)):
+    scores.loc[i, 'patient'] = i+1
+#print(scores)
+
+# create a new column with afftype for every patient in the data3 dataframe and assign the corresponding afftype from the scores dataframe
+data3['afftype'] = 0
+for i in range(0, len(data3)):
+    patient = data3['patient'][i]
+    data3.loc[i, 'afftype'] = scores['afftype'][patient-1]
+    # if afftype is 3 then we assign 1
+    if data3['afftype'][i] == 3:
+        data3.loc[i, 'afftype'] = 1
+    # if afftype is NaN then we assign 0
+    if np.isnan(data3['afftype'][i]):
+        data3.loc[i, 'afftype'] = 0
+        
 # save the data to a csv file
 data3.to_csv('Data/action.csv', index=False)
+
+
 
 
 
