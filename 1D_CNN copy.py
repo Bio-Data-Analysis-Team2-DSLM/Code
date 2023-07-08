@@ -17,7 +17,7 @@ for i in range(0, 49392, 48):
 
 
 
-# find the fist patient with target 1 and remove him and all the patients after him
+# find the fist patient with target 1 and remove him and all the patients after him 
 for i in range(0, 49392, 48):
     if data['target'][i] == 1:
         break

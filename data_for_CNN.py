@@ -16,47 +16,31 @@ for i in range(1, 56):
     df = df.reset_index(drop=True)
     #print(df)
     #print(len(df))
-    if len(df) % 30 != 0:
-        df = df.drop(df.index[len(df) - len(df) % 30:])
     #print(len(df))
     df = df.groupby(np.arange(len(df))//30).mean(numeric_only=True)
     df = df.round(3)
     df['patient'] = i
+    print(len(df))
     #print(df)
     data2 = pd.concat([data2, df], axis=0)
 
 data2 = data2.reset_index(drop=True)
-#print(data2)
+print(data2)
 
 # one day has 1440 minutes and we have one measurement every 30 minutes
 # so we have 48 measurements per day
 # for every patient wi will keep the maximum amount of days that is divisible by 48
 
-data3 = pd.DataFrame()
-
-for i in range(1, 56):
-    df = data2[data2['patient'] == i]
-    df = df.reset_index(drop=True)
-    #print(df)
-    #print(len(df))
-    if len(df) % 48 != 0:
-        df = df.drop(df.index[len(df) - len(df) % 48:])
-    #print(len(df))
-    df['patient'] = i
-    #print(df)
-    data3 = pd.concat([data3, df], axis=0)
-
-
-data3 = data3.reset_index(drop=True)
-print(data3)
-data3.to_csv('Data/action_cnn.csv', index=False)
+data2.to_csv('Data/action_cnn.csv', index=False)
 
 # find the index for the first and the last day for every patient
+
+
 
 last_day = []
 
 for i in range(1, 56):
-    df = data3[data3['patient'] == i]
+    df = data2[data2['patient'] == i]
     df = df.reset_index(drop=True)
     last_day.append(df.index[-1])
 
