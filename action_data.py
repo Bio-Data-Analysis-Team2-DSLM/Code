@@ -88,8 +88,6 @@ print(data3)
 # so we have 48 measurements per day
 # for every patient wi will keep the maximum amount of days that is divisible by 48
 
-data3.to_csv('Data/action_cnn.csv', index=False)
-
 ##################################################################
 ##################################################################
 
