@@ -4,27 +4,7 @@ import torch.nn as nn
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-data = pd.read_csv('Data/action_cnn.csv')
-first_row = pd.read_csv('Data/first_row_for_each_patient.csv')
-
-data = pd.DataFrame(data)
-data = data.drop(['patient'], axis=1)
-print(data)
-# create a new column which will assign the same number to every 48 rows
-data['patient'] = 0
-for i in range(0, 49392, 48):
-    data.loc[i:i+48, 'patient'] = i/48 + 1
-
-
-
-# find the fist patient with target 1
-for i in range(0, 49392, 48):
-    if data['target'][i] == 1:
-        break
-print()
-print(f'first patient with target 1 is patient #{data["patient"][i]} at row {i}')
-print()
-
+data = pd.read_csv('Data/action.csv')
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 # κωδικας για real patient number
@@ -34,30 +14,31 @@ print()
 features = []
 # create a list with the features of every patient
 # number of patients = 1029  and number of features = 48
-for i in range(1, 1030):
-    df = data[data['patient'] == i]
+for i in range(1, len(data['patient_new'].unique()) + 1): 
+    df = data[data['patient_new'] == i]
     df = df.reset_index(drop=True)
-    df = df.drop(['patient', 'target'], axis=1)
+    df = df.drop(['patient', 'target', 'patient_new'], axis=1)
     df = df.values
     features.append(df)
+print(features[0])
 
 # normalize the data to have mean 0 and std 1 for every list of features 
-for i in range(0, 1029):
+for i in range(0, len(data['patient_new'].unique())):
     scaler = StandardScaler()
     features[i] = scaler.fit_transform(np.array(features[i]).reshape(-1, 1))
 # make the lists of the same length
-for i in range(0, 1029):
+for i in range(0, len(data['patient_new'].unique())):
     features[i] = features[i].reshape(-1, 1)
 
 # convert the lists to tensors
-for i in range(0, 1029):
+for i in range(0, len(data['patient_new'].unique())):
     features[i] = torch.tensor(features[i], dtype=torch.float32)
 
 # create the X tensors
 X = torch.stack(features)
 
-# reshape the tensors to have shape (55, 1, 546)
-X = X.view(1029, 1, 48)
+# reshape the tensors to have shape (new_patients, 1, 48)
+X = X.view(len(data['patient_new'].unique()), 1, 48)
 
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------

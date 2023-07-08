@@ -63,9 +63,9 @@ dataset.to_csv('Data/dataset_after_scaling.csv', index=False)
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(30, 4)
-        self.fc2 = nn.Linear(4, 4)
-        self.fc3 = nn.Linear(4, 1)
+        self.fc1 = nn.Linear(30, 20)
+        self.fc2 = nn.Linear(20, 10)
+        self.fc3 = nn.Linear(10, 1)
         
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -114,20 +114,21 @@ criterion = nn.BCELoss() # Binary Cross Entropy loss for binary classification
 # mm = momentum
 # ld = learning rate decay
 
-for lr in [0.01, 0.001, 0.0001]:
-    for wd in [ 0.001, 0.0001, 0.00001]:
-        for mm in [0.5, 0.725, 0.9, 0.99]:
-            for ld in [1, 0.9]:
+
+# best run for 10000,0.0001,0.0001,0.99,0.9
+for lr in [ 0.001, 0.0001]:
+    for wd in [ 0.0000001]:
+        for mm in [ 0.5]:
+            for ld in [0.9]:
                 hyperparameters = {'lr': lr, 'weight_decay': wd, 'momentum': mm}
                 lr_decay = ld
                 print(f'lr = {lr}, wd = {wd}, mm = {mm}, ld = {ld}')
-                net = Net()
-
+                
 
                 hyperparameters = {'lr': lr, 'weight_decay': wd, 'momentum': mm}
                 lr_decay = ld
 
-                optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
+                
 
 
                 # train the model
@@ -147,6 +148,8 @@ for lr in [0.01, 0.001, 0.0001]:
                     X_val_fold = X_train_[val_ids]
                     y_val_fold = y_train_[val_ids]
 
+                    net = Net()
+                    optimizer = torch.optim.SGD(net.parameters(), **hyperparameters)
 
                     for i in range(epochs):
                         i += 1
@@ -196,7 +199,15 @@ for lr in [0.01, 0.001, 0.0001]:
                 print(f'loss on the test set = {loss:.3f}')
                 print(f'Accuracy on the test set: {round(accuracy, 4)*100:3.4f}%')
 
-
+                # plot the loss
+                import matplotlib.pyplot as plt
+                x = [i[0] for i in loss_values]
+                y = [i[1] for i in loss_values]
+                plt.plot(x, y)
+                plt.xlabel('epochs')
+                plt.ylabel('loss')
+                plt.show()
+                
 
                 # csv with colums: epochs, lr, weight_decay, momentum, accuracy
                 # in order to find the best hyperparameters
@@ -215,7 +226,7 @@ for lr in [0.01, 0.001, 0.0001]:
 
 
                 # save the model's weights in order to plot the features with their weights
-                torch.save(net.state_dict(), 'outputs/model_1/NN_weights.pt')
+                torch.save(net.state_dict(), 'outputs/model_1/model_1_weights.pth')
 
 
                 # merge X_test with y_test and save it to csv
