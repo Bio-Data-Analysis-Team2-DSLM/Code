@@ -144,13 +144,3 @@ for i in range(0, len(data3)):
         
 # save the data to a csv file
 data3.to_csv('Data/action.csv', index=False)
-
-
-
-
-
-
-
-
-
-

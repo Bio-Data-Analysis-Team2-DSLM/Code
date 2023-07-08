@@ -3,17 +3,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+import balance_dataset
 
-data = pd.read_csv('Data/action.csv')
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-# κωδικας για real patient number
-
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 features = []
 # create a list with the features of every patient
-# number of patients = 1029  and number of features = 48
+# number of patients = 1034  and number of features = 48
 for i in range(1, len(data['patient_new'].unique()) + 1): 
     df = data[data['patient_new'] == i]
     df = df.reset_index(drop=True)

@@ -81,7 +81,8 @@ np.random.seed(42)
 
 
 # split the data to train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, \
+                                                    stratify=y)
 
 X_train = X_train.reset_index(drop=True)
 X_test = X_test.reset_index(drop=True)
