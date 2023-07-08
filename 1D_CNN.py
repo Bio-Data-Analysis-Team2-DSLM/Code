@@ -113,8 +113,6 @@ def CNN_train_test(a, X_train, X_test, name):
     y = [i[1] for i in loss_values]
     plt.plot(x, y)
     plt.show()
-    # save the loss picture
-    plt.savefig(f'Data/loss_CNN_'+ name +'png')
 
     # test the model
     with torch.no_grad():
