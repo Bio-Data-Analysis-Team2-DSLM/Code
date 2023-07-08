@@ -69,13 +69,13 @@ data3 = pd.DataFrame()
 for i in range(1, 56):
     df = data2[data2['patient'] == i]
     df = df.reset_index(drop=True)
-    #print(df)
-    #print(len(df))
-    #print(len(df))
     df = df.groupby(np.arange(len(df))//30).mean(numeric_only=True)
+    # we keep rows multiple of 48
+    if len(df) % 48 != 0:
+        df = df[:-(len(df) % 48)]
     df = df.round(3)
     df['patient'] = i
-    #print(df)
+    #print(len(df))
     data3 = pd.concat([data3, df], axis=0)
 
 data3 = data3.reset_index(drop=True)

@@ -5,25 +5,35 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import balance_dataset
 
+data = pd.read_csv('Data/train1.csv')
+
+data = data.drop(['patient', 'target', 'afftype'], axis=1)
+print(data)
 
 features = []
+
 # create a list with the features of every patient
-# number of patients = 1034  and number of features = 48
-for i in range(1, len(data['patient_new'].unique()) + 1): 
+for i in range(1, len(data['patient_new'].unique()) + 1):
     df = data[data['patient_new'] == i]
     df = df.reset_index(drop=True)
-    df = df.drop(['patient', 'target', 'patient_new'], axis=1)
+    df = df.drop(['patient_new'], axis=1)
     df = df.values
     features.append(df)
-print(features[0])
+    
+breakpoint()
+# print shape of every list of features
+for i in range(0, len(features)):
+    print(features[i].shape)
+    
+# scale the features
+scaler = StandardScaler()
+for i in range(0, len(features)):
+    features[i] = scaler.fit_transform(features[i])
 
-# normalize the data to have mean 0 and std 1 for every list of features 
-for i in range(0, len(data['patient_new'].unique())):
-    scaler = StandardScaler()
-    features[i] = scaler.fit_transform(np.array(features[i]).reshape(-1, 1))
 # make the lists of the same length
-for i in range(0, len(data['patient_new'].unique())):
+for i in range(0, len(features)):
     features[i] = features[i].reshape(-1, 1)
+    
 
 # convert the lists to tensors
 for i in range(0, len(data['patient_new'].unique())):
