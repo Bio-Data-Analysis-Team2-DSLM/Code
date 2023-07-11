@@ -20,6 +20,7 @@ analytic_test = analytic_test.drop(['afftype'], axis=1)
 
 train_features = pd.read_csv('Data/extracted_features_for_train1.csv')
 test_features = pd.read_csv('Data/extracted_features_for_test1.csv')
+validation_features = pd.read_csv('Data/extracted_features_for_validation1.csv')
 
 
 # function to find the first patient with target 1 (healthy)
@@ -40,22 +41,26 @@ def assign_targets(analytic, extracted):
 
 df_train = assign_targets(analytic_train, train_features)
 df_test = assign_targets(analytic_test, test_features)
+df_validation = assign_targets(analytic_test, validation_features)
 
 # balance the dataset
 df_train = balance_dataset.balance_dataset(df_train)
 df_test = balance_dataset.balance_dataset(df_test)
-
+df_validation = balance_dataset.balance_dataset(df_validation)
 
 # scale the data from all the features except the target
 scaler = StandardScaler()
 df_train.iloc[:, 1:-1] = scaler.fit_transform(df_train.iloc[:, 1:-1])
 df_test.iloc[:, 1:-1] = scaler.transform(df_test.iloc[:, 1:-1])
+df_validation.iloc[:, 1:-1] = scaler.transform(df_validation.iloc[:, 1:-1])
 
 # split to features and targets
 X_train = df_train.drop(['target'], axis=1)
 y_train = df_train['target']
 X_test = df_test.drop(['target'], axis=1)
 y_test = df_test['target']
+X_validation = df_validation.drop(['target'], axis=1)
+y_validation = df_validation['target']
 
 #------------------------------------------------------------------#
 #------------------------------------------------------------------#
@@ -85,10 +90,13 @@ X_train = X_train.reset_index(drop=True)
 X_test = X_test.reset_index(drop=True)
 y_train = y_train.reset_index(drop=True)
 y_test = y_test.reset_index(drop=True)
+X_validation = X_validation.reset_index(drop=True)
+y_validation = y_validation.reset_index(drop=True)
 
 print()
 print(f'We have {len(X_train)} patients in the trainig set')
-print(f'and {len(X_test)} patients in the test set')
+print(f'{len(X_test)} patients in the test set')
+print(f'and {len(X_validation)} patients in the validation set')
 print()
 print('-----------------------------')
 
@@ -97,6 +105,8 @@ X_train = torch.tensor(X_train.values, dtype=torch.float32)
 X_test = torch.tensor(X_test.values, dtype=torch.float32)
 y_train = torch.tensor(y_train.values, dtype=torch.float32)
 y_test = torch.tensor(y_test.values, dtype=torch.float32)
+X_validation = torch.tensor(X_validation.values, dtype=torch.float32)
+y_validation = torch.tensor(y_validation.values, dtype=torch.float32)
 
 
 ##########################################################################################
@@ -104,7 +114,7 @@ y_test = torch.tensor(y_test.values, dtype=torch.float32)
 ##########################################################################################
 
 
-def train_test(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_decay):
+def train_test(X_train, X_test, X_validation, y_train, y_test, y_validation, epochs, hyperparameters, lr_decay):
     lr = hyperparameters['lr']
     # set the seeds
     torch.manual_seed(42)
@@ -118,8 +128,9 @@ def train_test(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_dec
     
     # create the lists for the loss and accuracy
     train_losses = []
-    test_losses = []
+    validation_losses = []
     test_accuracy = []
+    validation_accuracy = []
     
     # train the model
     for epoch in range(epochs):
@@ -145,12 +156,27 @@ def train_test(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_dec
             # set the model to evaluation mode
             net.eval()
             # make the predictions
+            y_pred = net(X_validation)
+            # calculate the loss
+            loss = criterion(y_pred, y_validation.unsqueeze(1).float())
+            # append the loss to the list
+            validation_losses.append(loss.item())
+            # calculate the accuracy
+            correct = 0
+            total = 0
+            # round the predictions
+            y_pred = torch.round(y_pred)
+            # calculate the accuracy
+            correct += (y_pred == y_validation.unsqueeze(1)).sum().item()
+            total += y_validation.size(0)
+            # append the accuracy to the list
+            validation_accuracy.append(correct/total)
+
+        # print the results for every 100 epochs
+        if epoch % 1000 == 0:
             y_pred = net(X_test)
             # calculate the loss
-            loss = criterion(y_pred, y_test.unsqueeze(1).float())
-            # append the loss to the list
-            test_losses.append(loss.item())
-            # calculate the accuracy
+            test_loss = criterion(y_pred, y_test.unsqueeze(1).float())
             correct = 0
             total = 0
             # round the predictions
@@ -161,18 +187,19 @@ def train_test(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_dec
             # append the accuracy to the list
             test_accuracy.append(correct/total)
 
-        # print the results for every 100 epochs
-        if epoch % 1000 == 0:
-            print(f'Epoch: {epoch}/{epochs}, Train Loss: {train_losses[-1]:.4f}, Test Loss: {test_losses[-1]:.4f}, Test Accuracy: {test_accuracy[-1]:.4f}')
+            print(f'Epoch: {epoch}/{epochs}, Train Loss: {train_losses[-1]:.4f}, Validation Loss: {validation_losses[-1]:.4f}')
+            print(f'-------------- Validation Accuracy: {validation_accuracy[-1]:.4f}, Test Accuracy: {test_accuracy[-1]:.4f}')
+
         # update the learning rate
         if epoch % 1000==0:
             lr= lr * lr_decay
+
     return test_accuracy[-1], net
     
 # kfold cross validation
 # we will use 5 folds
 # we will train the model 5 times
-def kfold(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_decay):
+def kfold(X_train,  y_train, epochs, hyperparameters, lr_decay):
     from sklearn.model_selection import KFold
     kfolds = 5
     kf = KFold(n_splits=kfolds, shuffle=True, random_state=42)
@@ -215,7 +242,7 @@ for lr in {0.001, 0.0001}:
                     # run the model
                     print()
                     print(f'lr: {lr}, wd: {wd}, mm: {mm}, lr_decay: {lr_decay}, epochs: {epochs}')
-                    test_accuracy, net = train_test(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_decay)
+                    test_accuracy, net = train_test(X_train, X_test, X_validation, y_train, y_test, y_validation, epochs, hyperparameters, lr_decay)
 
                     # csv with colums: epochs, lr, weight_decay, momentum, accuracy
                     # in order to find the best hyperparameters
@@ -251,7 +278,7 @@ hyperparameters = {'lr': lr, 'weight_decay': weight_decay, 'momentum': momentum}
 # run the model
 print()
 print(f'lr: {lr}, wd: {weight_decay}, mm: {momentum}, lr_decay: {lr_decay}, epochs: {epochs}')
-test_accuracy, net = train_test(X_train, X_test, y_train, y_test, epochs, hyperparameters, lr_decay)
+test_accuracy, net = train_test(X_train, X_test, X_validation, y_train, y_test, y_validation, epochs, hyperparameters, lr_decay)
 
 # save the model's weights in order to plot the features with their weights
 torch.save(net.state_dict(), 'outputs/model_1/model_1_weights.pth')
