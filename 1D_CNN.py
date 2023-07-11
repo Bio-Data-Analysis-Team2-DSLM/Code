@@ -71,7 +71,7 @@ class CNN(nn.Module):
 torch.manual_seed(88)
 np.random.seed(44)
 
-def CNN_train_test(a, X_train, X_test, name):
+def CNN_train_test(a, X_train, X_test, X_validation, name):
     # set the seeds
     torch.manual_seed(24)
     np.random.seed(42)
@@ -87,6 +87,7 @@ def CNN_train_test(a, X_train, X_test, name):
     # train the model
     epochs = 10000
     loss_values = []
+    validation_loss_values = []
 
     for i in range(epochs):
         i += 1
@@ -95,6 +96,12 @@ def CNN_train_test(a, X_train, X_test, name):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # validate the model
+        with torch.no_grad():
+            y_val = model.forward(X_validation)
+            loss_val = loss_function(y_val, X_validation)
+
             # decrease the learning rate every 300 epochs
         if i % 1000 == 0:
             for g in optimizer.param_groups:
@@ -102,9 +109,10 @@ def CNN_train_test(a, X_train, X_test, name):
 
         # print every 1000 epochs
         if i % 1000 == 0:
-            print(f'epoch: {i:2} loss: {loss.item():10.3f}')
+            print(f'epoch: {i:2} training loss: {loss.item():10.3f} validation loss: {loss_val.item():10.3f}')
             # save the loss values as a list [epochs, loss] in order to plot them
             loss_values.append([i, loss.item()])
+            validation_loss_values.append([i, loss_val.item()])           
 
         
     # plot the loss values
@@ -116,8 +124,8 @@ def CNN_train_test(a, X_train, X_test, name):
 
     # test the model
     with torch.no_grad():
-        y_val = model.forward(X_test)
-        loss = loss_function(y_val, X_test)
+        y_test = model.forward(X_test)
+        loss = loss_function(y_test, X_test)
 
     print(f'loss on the test set = {loss:.3f}')
 
@@ -137,21 +145,27 @@ def extract_features(model, X, name):
 
 train1 = pd.read_csv('Data/train1.csv')
 test1 = pd.read_csv('Data/test1.csv')
+validation1 = pd.read_csv('Data/validation1.csv')
 train2 = pd.read_csv('Data/train2.csv')
 test2 = pd.read_csv('Data/test2.csv')
+validation2 = pd.read_csv('Data/validation2.csv')
 
 X_train1 = X_features(train1)
 X_test1 = X_features(test1)
+X_validation1 = X_features(validation1)
 X_train2 = X_features(train2)
 X_test2 = X_features(test2)
+X_validation2 = X_features(validation2)
 
-model_1 = CNN_train_test(30, X_train1, X_test1, 'model1')
-model_2 = CNN_train_test(30, X_train2, X_test2, 'model2')
+model_1 = CNN_train_test(30, X_train1, X_test1, X_validation1, 'model1')
+model_2 = CNN_train_test(30, X_train2, X_test2, X_validation2, 'model2')
 
 extract_features(model_1, X_train1, 'train1')
 extract_features(model_1, X_test1, 'test1')
+extract_features(model_1, X_validation1, 'validation1')
 extract_features(model_2, X_train2, 'train2')
 extract_features(model_2, X_test2, 'test2')
+extract_features(model_2, X_validation2, 'validation2')
 
 
 
